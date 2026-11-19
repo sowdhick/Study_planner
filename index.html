@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Study Planner</title>
+<link rel="manifest" href="manifest.json"><meta name="theme-color" content="#4f6bed"><link rel="icon" href="icon-192.png"><link rel="apple-touch-icon" href="icon-192.png">
+<style>
+:root{--bg:#f6f7fb;--card:#fff;--fg:#1b1f2a;--mut:#667085;--line:#e4e7ee;--acc:#4f6bed;--accfg:#fff;--bad:#d9534f;color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#0f1218;--card:#181c25;--fg:#e8ecf5;--mut:#98a2b3;--line:#272c38;--acc:#7b93ff;--accfg:#0b0e14;--bad:#ff7a75;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0f1218;--card:#181c25;--fg:#e8ecf5;--mut:#98a2b3;--line:#272c38;--acc:#7b93ff;--accfg:#0b0e14;--bad:#ff7a75;color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.4 system-ui,-apple-system,sans-serif;padding-bottom:90px}
+.wrap{max-width:640px;margin:0 auto;padding:0 14px}
+h1{font-size:22px;margin:18px 0 2px}h2{font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--mut);margin:20px 0 6px}h3{font-size:15px;margin:0 0 8px}
+.mut{color:var(--mut);font-size:13px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin:12px 0}
+.row{display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:10px 0;border-top:1px solid var(--line)}.lg{flex:1 0 100%;padding-top:4px}
+#lock{position:fixed;inset:0;z-index:50;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:20px}#lock[hidden],.tabs[hidden]{display:none}
+.lockbox{width:100%;max-width:320px;text-align:center}.lockbox input{text-align:center;letter-spacing:.4em;font-size:22px}.lockbox .lnk{margin-top:16px}
+.row:first-child{border-top:0}.grow{flex:1;min-width:0}.row.done .grow{opacity:.5;text-decoration:line-through}
+.dot{width:10px;height:10px;border-radius:50%;flex:none}
+.chk{width:28px;height:28px;border-radius:8px;border:2px solid var(--line);background:none;color:var(--acc);font-weight:700;flex:none;cursor:pointer}
+.done .chk{background:var(--acc);color:var(--accfg);border-color:var(--acc)}
+.x{background:none;border:0;color:var(--mut);font-size:22px;width:36px;height:36px;cursor:pointer}
+input,select{width:100%;height:44px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--fg);padding:0 10px;font:inherit;margin:4px 0 10px}
+label{font-size:13px;color:var(--mut);display:block}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:0 10px}
+.btn{height:44px;border-radius:10px;border:0;background:var(--acc);color:var(--accfg);font:600 15px system-ui;padding:0 16px;cursor:pointer;width:100%}
+.btn.s{background:none;color:var(--acc);border:1px solid var(--line);width:auto;height:36px;font-size:13px}
+.lnk{background:none;border:0;color:var(--acc);font:inherit;text-decoration:underline;padding:0;cursor:pointer}
+textarea{width:100%;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--fg);padding:8px;font:12px ui-monospace,monospace}.g2 .btn.s{width:100%}
+.note{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px;margin-bottom:12px;font-size:14px}
+.days{display:flex;gap:6px;margin:4px 0 12px}.days label{flex:1;margin:0}
+.days input{display:none}.days span{display:block;text-align:center;padding:10px 0;border:1px solid var(--line);border-radius:10px;color:var(--fg)}
+.days input:checked+span{background:var(--acc);color:var(--accfg);border-color:var(--acc)}
+.bar{height:8px;border-radius:4px;background:var(--line);overflow:hidden;margin-top:6px}.bar i{display:block;height:100%}
+.tabs{position:fixed;left:0;right:0;bottom:0;display:flex;background:var(--card);border-top:1px solid var(--line);padding:6px 6px calc(6px + env(safe-area-inset-bottom,0px))}
+.tabs button{flex:1;height:46px;border:0;background:none;color:var(--mut);font:600 14px system-ui;border-radius:10px;cursor:pointer}
+.tabs button.on{color:var(--acc);background:var(--bg)}
+</style></head><body>
+<div class="wrap"><h1>Study Planner</h1><div class="mut" id="date"></div><main id="v"></main></div>
+<div id="lock" hidden><div class="lockbox"><h1>Study Planner</h1><div class="mut" id="lk-msg">Enter your PIN to unlock.</div><input id="lk-pin" type="password" inputmode="numeric" autocomplete="off" maxlength="8" placeholder="PIN" style="margin-top:14px"><button class="btn" data-a="unlock">Unlock</button><button class="lnk" data-a="forgot">Forgot PIN?</button></div></div>
+<nav class="tabs"><button data-a="tab" data-t="agenda">Agenda</button><button data-a="tab" data-t="plan">Plan</button><button data-a="tab" data-t="subjects">Subjects</button></nav>
+<script>
+const $=s=>document.querySelector(s),esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const pad=n=>String(n).padStart(2,'0'),iso=d=>d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()),parse=s=>new Date(s+'T00:00:00'),uid=()=>Math.random().toString(36).slice(2,9);
+const tm=s=>{const[a,b]=s.split(':');return+a*60+ +b},hm=m=>pad(Math.floor(m/60))+':'+pad(m%60);
+const t12=m=>{const h=Math.floor(m/60)%24;return((h+11)%12+1)+':'+pad(m%60)+(h<12?' AM':' PM')};
+const dur=m=>m<60?m+'m':m%60?Math.floor(m/60)+'h '+m%60+'m':m/60+'h';
+const todayIso=()=>iso(new Date());
+function dayLabel(d){if(d===todayIso())return'Today';const n=new Date();n.setDate(n.getDate()+1);if(d===iso(n))return'Tomorrow';return parse(d).toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric'})}
+let st={subjects:[],sessions:[]},tab='agenda',msg='',last=[],undo=null,armed='',logging='',okStore=true,lastDay=todayIso();
+const KEY='studyplanner:v1',D=/^\d{4}-\d\d-\d\d$/,T=/^\d\d:\d\d$/;
+function clean(o){const r={subjects:[],sessions:[]};if(!o||typeof o!=='object')return r;
+ (Array.isArray(o.subjects)?o.subjects:[]).forEach(s=>{if(s&&typeof s.id==='string'&&typeof s.name==='string')r.subjects.push({id:s.id,name:s.name.slice(0,60),color:/^#[0-9a-f]{6}$/i.test(s.color)?s.color:'#4f6bed',exam:D.test(s.exam)?s.exam:''})});
+ (Array.isArray(o.sessions)?o.sessions:[]).forEach(s=>{if(s&&typeof s.id==='string'&&D.test(s.date)&&T.test(s.start)&&s.mins>0&&s.mins<=1440&&r.subjects.some(x=>x.id===s.sid))r.sessions.push({id:s.id,sid:s.sid,topic:String(s.topic||'').slice(0,80),date:s.date,start:s.start,mins:Math.round(s.mins),done:!!s.done,logged:s.logged>0?Math.min(1440,Math.round(s.logged)):(s.done?Math.round(s.mins):0),note:String(s.note||'').slice(0,200)})});
+ return r}
+function load(){try{localStorage.setItem(KEY+':probe','1');localStorage.removeItem(KEY+':probe')}catch(e){okStore=false}
+ let raw=null;try{raw=localStorage.getItem(KEY);st=raw?clean(JSON.parse(raw)):{subjects:[],sessions:[]}}catch(e){st={subjects:[],sessions:[]};try{if(raw)localStorage.setItem(KEY+':corrupt',raw)}catch(_){}}}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(st));okStore=true}catch(e){okStore=false}}
+load();
+const sub=id=>st.subjects.find(s=>s.id===id)||{name:'Deleted subject',color:'#999'};
+const sorted=()=>[...st.sessions].sort((a,b)=>a.date.localeCompare(b.date)||tm(a.start)-tm(b.start));
+function slot(day,mins,t){const ex=st.sessions.filter(s=>s.date===day).map(s=>[tm(s.start),tm(s.start)+s.mins]).sort((a,b)=>a[0]-b[0]);
+ const fit=f=>{for(const[a,b]of ex)if(f<b&&f+mins>a)f=b;return f};
+ let r=fit(t);if(r+mins>1440)r=fit(360);return r+mins>1440?-1:r}
+const row=s=>{const b=sub(s.sid);return`<div class="row${s.done?' done':''}"><button class="chk" data-a="${s.done?'reopen':'open'}" data-id="${s.id}" aria-label="${s.done?'Reopen session':'Log progress'}">${s.done?'✓':''}</button><span class="dot" style="background:${esc(b.color)}"></span><div class="grow"><b>${esc(b.name)}</b>${s.topic?' · '+esc(s.topic):''}<div class="mut">${t12(tm(s.start))} – ${t12(tm(s.start)+s.mins)} · ${dur(s.mins)}${s.done?' · logged '+dur(s.logged)+(s.note?' · '+esc(s.note):''):''}</div></div><button class="x" data-a="del" data-id="${s.id}" aria-label="Delete">×</button>${logging===s.id?`<div class="lg"><label>Minutes you studied</label><input id="lg-m" type="number" min="1" max="720" value="${s.mins}"><label>What did you cover? (optional)</label><input id="lg-n" maxlength="200"><div class="g2"><button class="btn" data-a="submit" data-id="${s.id}">Submit &amp; close</button><button class="btn s" data-a="cancel">Cancel</button></div></div>`:''}</div>`};
+const note=()=>(okStore?'':`<div class="note">Your browser is blocking saving, so changes will be lost when you close this page. Use Backup in Subjects to keep a copy.</div>`)+(msg?`<div class="note">${esc(msg)}${undo?' <button class="lnk" data-a="undo">Undo</button>':''}${undo&&undo.t==='plan'?' · <button class="lnk" data-a="tab" data-t="agenda">See agenda</button>':''}</div>`:'');
+const opts=()=>st.subjects.map(s=>`<option value="${s.id}">${esc(s.name)}</option>`).join('');
+
+function vAgenda(){
+ const t=todayIso(),all=sorted(),td=all.filter(s=>s.date===t),miss=all.filter(s=>s.date<t&&!s.done),fut=all.filter(s=>s.date>t);
+ const dn=td.filter(s=>s.done).length,tdm=td.reduce((a,s)=>a+s.mins,0);
+ let h=note()+`<div class="card"><b>${td.length?dn+' of '+td.length+' sessions done today':'Nothing planned today'}</b><div class="mut">${td.length?dur(tdm)+' planned':'Add a session or auto-plan a subject.'}</div></div>`;
+ if(!st.subjects.length)h+=`<div class="card"><h3>Start here</h3><div class="mut" style="margin-bottom:10px">Add the subjects you are studying, then let the planner spread your hours before each deadline.</div><button class="btn" data-a="tab" data-t="subjects">Add a subject</button></div>`;
+ else if(!st.sessions.length)h+=`<div class="card"><button class="btn" data-a="tab" data-t="plan">Create a study plan</button></div>`;
+ if(miss.length)h+=`<h2>Missed</h2><div class="card">${miss.map(row).join('')}<button class="btn s" data-a="movemiss" style="margin-top:8px">Move all to today</button></div>`;
+ if(td.length)h+=`<h2>Today</h2><div class="card">${td.map(row).join('')}</div>`;
+ const g={};fut.forEach(s=>(g[s.date]=g[s.date]||[]).push(s));
+ Object.keys(g).forEach(d=>{h+=`<h2>${dayLabel(d)}</h2><div class="card">${g[d].map(row).join('')}</div>`});
+ return h}
+
+function vPlan(){
+ if(!st.subjects.length)return`<div class="card"><div class="mut" style="margin-bottom:10px">Add a subject first.</div><button class="btn" data-a="tab" data-t="subjects">Add a subject</button></div>`;
+ const e=new Date();e.setDate(e.getDate()+13);const ex=st.subjects[0].exam;if(ex){const x=parse(ex);x.setDate(x.getDate()-1);if(iso(x)>=todayIso())e.setTime(x.getTime())}
+ return note()+`<div class="card"><h3>Auto-plan a subject</h3><div class="mut" style="margin-bottom:8px">Spreads your hours evenly across your study days.</div>
+<label>Subject</label><select id="ap-sub">${opts()}</select>
+<label>Topic or goal (optional)</label><input id="ap-topic" placeholder="e.g. Chapters 1–5">
+<div class="g2"><div><label>Total hours</label><input id="ap-hours" type="number" min="0.5" step="0.5" value="10"></div><div><label>Max hours per day</label><input id="ap-max" type="number" min="0.5" step="0.5" value="2"></div>
+<div><label>Finish by</label><input id="ap-end" type="date" value="${iso(e)}"></div><div><label>Start time</label><input id="ap-start" type="time" value="18:00"></div></div>
+<label>Study days</label><div class="days" id="ap-days">${['S','M','T','W','T','F','S'].map((d,i)=>`<label><input type="checkbox" ${i>0&&i<6?'checked':''}><span>${d}</span></label>`).join('')}</div>
+<button class="btn" data-a="auto">Generate plan</button></div>
+<div class="card"><h3>Add one session</h3><label>Subject</label><select id="m-sub">${opts()}</select>
+<label>Topic (optional)</label><input id="m-topic">
+<div class="g2"><div><label>Date</label><input id="m-date" type="date" value="${todayIso()}"></div><div><label>Start</label><input id="m-start" type="time" value="18:00"></div></div>
+<label>Minutes</label><input id="m-mins" type="number" min="5" step="5" value="60"><button class="btn" data-a="one">Add session</button></div>`}
+
+function vSubjects(){
+ const li=st.subjects.map(s=>{const all=st.sessions.filter(x=>x.sid===s.id),tot=all.reduce((a,x)=>a+x.mins,0),dn=all.filter(x=>x.done).reduce((a,x)=>a+x.logged,0),p=tot?Math.min(100,Math.round(dn/tot*100)):0;
+  const left=s.exam?Math.round((parse(s.exam)-parse(todayIso()))/864e5):null;
+  return`<div class="row"><span class="dot" style="background:${esc(s.color)}"></span><div class="grow"><b>${esc(s.name)}</b><div class="mut">${s.exam?(left>=0?'Exam in '+left+' day'+(left===1?'':'s'):'Exam passed'):'No exam date'} · ${dur(dn)} of ${dur(tot)} done</div><div class="bar"><i style="width:${p}%;background:${esc(s.color)}"></i></div></div><button class="btn s" data-a="delsub" data-id="${s.id}">${armed===s.id?'Tap to confirm':'Delete'}</button></div>`}).join('');
+ return note()+(li?`<div class="card">${li}</div>`:'')+`<div class="card"><h3>Add a subject</h3><label>Name</label><input id="s-name" placeholder="e.g. Biology">
+<div class="g2"><div><label>Color</label><input id="s-color" type="color" value="#4f6bed"></div><div><label>Exam or deadline (optional)</label><input id="s-exam" type="date"></div></div><button class="btn" data-a="addsub">Add subject</button></div><div class="card"><h3>Backup</h3><div class="mut" style="margin-bottom:8px">Plans live in this browser only. Copy this text somewhere safe, or paste a saved copy and restore it.</div><textarea id="bk" rows="3"></textarea><div class="g2" style="margin-top:8px"><button class="btn s" data-a="backup">Show backup</button><button class="btn s" data-a="restore">Restore from text</button></div></div>`+pinCard()}
+
+const PK='studyplanner:pin',cryptoOk=!!(window.crypto&&crypto.subtle);
+const hex=b=>[...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('');
+async function hashPin(p,sh){const salt=Uint8Array.from(sh.match(/../g).map(h=>parseInt(h,16)));
+ const k=await crypto.subtle.importKey('raw',new TextEncoder().encode(p),'PBKDF2',false,['deriveBits']);
+ return hex(await crypto.subtle.deriveBits({name:'PBKDF2',salt,iterations:150000,hash:'SHA-256'},k,256))}
+function readPin(){try{const o=JSON.parse(localStorage.getItem(PK));return o&&typeof o.salt==='string'&&typeof o.hash==='string'?o:null}catch(e){return null}}
+function writePin(o){try{if(o)localStorage.setItem(PK,JSON.stringify(o));else localStorage.removeItem(PK)}catch(e){}}
+let pin=readPin(),locked=!!pin,lastActive=Date.now(),hiddenAt=0,fgArmed=false;
+const lockMsg=t=>{const e=$('#lk-msg');if(e)e.textContent=t};
+const wait=o=>Math.ceil((o.until-Date.now())/1000);
+const fail=o=>{o.fails=(o.fails||0)+1;if(o.fails>=5)o.until=Date.now()+Math.min(900000,30000*2**(o.fails-5));writePin(o)};
+function lock(){if(!pin)return;locked=true;logging='';armed='';msg='';fgArmed=false;lockMsg('Enter your PIN to unlock.');render();setTimeout(()=>{const i=$('#lk-pin');if(i)i.focus()},0)}
+async function unlock(){const o=pin,v=$('#lk-pin').value;fgArmed=false;
+ if(!o)return render();
+ if(Date.now()<o.until)return lockMsg('Too many attempts. Try again in '+wait(o)+'s.');
+ if(!/^\d{4,8}$/.test(v))return lockMsg('Enter your 4–8 digit PIN.');
+ const h=await hashPin(v,o.salt);$('#lk-pin').value='';
+ if(h===o.hash){o.fails=0;o.until=0;writePin(o);locked=false;lastActive=Date.now();render()}
+ else{fail(o);lockMsg(o.until>Date.now()?'Too many attempts. Try again in '+wait(o)+'s.':'Wrong PIN. '+(5-o.fails)+' tries left before a delay.')}}
+function forgot(){if(!fgArmed){fgArmed=true;return lockMsg('This erases all plans and removes the PIN. Tap Forgot PIN again to confirm.')}
+ try{localStorage.removeItem(KEY);localStorage.removeItem(KEY+':corrupt');localStorage.removeItem(PK)}catch(e){}
+ st={subjects:[],sessions:[]};pin=null;locked=false;fgArmed=false;tab='agenda';msg='';render()}
+async function pinAction(a){const v=i=>$('#'+i)?$('#'+i).value:'';
+ if(a!=='pinset'){const o=pin;
+  if(Date.now()<o.until){msg='Too many attempts. Try again in '+wait(o)+'s.';return render()}
+  if(await hashPin(v('pn-cur'),o.salt)!==o.hash){fail(o);msg='Current PIN is incorrect.';return render()}
+  o.fails=0;o.until=0;
+  if(a==='pinremove'){writePin(null);pin=readPin();msg='PIN lock removed.';return render()}}
+ const n=v('pn-new');
+ if(!/^\d{4,8}$/.test(n)){msg='Use 4 to 8 digits for the new PIN.';return render()}
+ if(n!==v('pn-new2')){msg='The two new PINs do not match.';return render()}
+ const salt=hex(crypto.getRandomValues(new Uint8Array(16))),o={salt,hash:await hashPin(n,salt),fails:0,until:0};
+ writePin(o);const chk=readPin();
+ if(!chk||chk.hash!==o.hash){pin=chk;msg='Your browser would not save the PIN, so it was not changed.';return render()}
+ pin=o;msg=a==='pinset'?'PIN lock is on.':'PIN changed.';render()}
+function pinCard(){if(!cryptoOk)return'';
+ const pi=id=>`<input id="${id}" type="password" inputmode="numeric" maxlength="8" autocomplete="off">`;
+ return pin?`<div class="card"><h3>PIN lock</h3><div class="mut" style="margin-bottom:8px">Locks after 5 minutes idle, or 30 seconds after you leave this tab.</div><label>Current PIN</label>${pi('pn-cur')}<label>New PIN (4–8 digits)</label>${pi('pn-new')}<label>Repeat new PIN</label>${pi('pn-new2')}<div class="g2"><button class="btn s" data-a="pinchange">Change PIN</button><button class="btn s" data-a="pinremove">Remove PIN</button></div><button class="btn" style="margin-top:10px" data-a="lockNow">Lock now</button></div>`
+ :`<div class="card"><h3>PIN lock</h3><div class="mut" style="margin-bottom:8px">Hide your plans behind a 4–8 digit PIN.</div><label>PIN</label>${pi('pn-new')}<label>Repeat PIN</label>${pi('pn-new2')}<button class="btn" data-a="pinset">Turn on PIN lock</button></div>`}
+function auto(){
+ const g=i=>$('#'+i).value,sid=g('ap-sub'),hours=+g('ap-hours'),mx=+g('ap-max'),end=g('ap-end'),start=g('ap-start')||'18:00',on=[...document.querySelectorAll('#ap-days input')].map(i=>i.checked);
+ if(!(hours>0)||!(mx>0)||!end||!on.some(Boolean)){msg='Fill in hours, a daily limit, a finish date and at least one study day.';last=[];return}
+ const now=new Date(),d=new Date(now.getFullYear(),now.getMonth(),now.getDate());const cap=new Date(d);cap.setDate(cap.getDate()+365);const lim=iso(cap);
+ if(now.getHours()*60+now.getMinutes()>=tm(start))d.setDate(d.getDate()+1);
+ const days=[];for(;iso(d)<=end&&iso(d)<=lim;d.setDate(d.getDate()+1))if(on[d.getDay()])days.push(iso(d));
+ if(!days.length){msg='No study days fit before that date. Pick a later finish date or more days.';last=[];return}
+ const mu=Math.max(1,Math.floor(mx*2));let tu=Math.round(hours*2),extra='';
+ if(tu>days.length*mu){tu=days.length*mu;extra=' Only '+tu/2+'h fit, so add days or raise the daily limit for the rest.'}
+ const base=Math.floor(tu/days.length),rem=tu%days.length;last=[];
+ let skip=0;days.forEach((day,i)=>{const u=base+(i<rem?1:0);if(!u)return;const mins=u*30,s=slot(day,mins,tm(start));if(s<0){skip++;return}
+  const x={id:uid(),sid,topic:g('ap-topic').trim(),date:day,start:hm(s),mins,done:false};st.sessions.push(x);last.push(x.id)});
+ save();undo=last.length?{t:'plan',ids:last}:null;msg=last.length?'Added '+last.length+' sessions ('+tu/2+'h) from '+dayLabel(days[0])+' to '+dayLabel(days[days.length-1])+'.'+extra+(skip?' '+skip+' day(s) were too full to fit a session.':''):'Those days are already full. Try other days or a different start time.'}
+
+function act(a,el){try{
+ const id=el.dataset.id;
+ if(a==='unlock')return void unlock().catch(()=>lockMsg('Could not check the PIN in this browser.'));
+ if(a==='forgot')return forgot();
+ if(locked)return;
+ if(a==='lockNow')return lock();
+ if(a==='pinset'||a==='pinchange'||a==='pinremove')return void pinAction(a).catch(()=>{msg='Could not update the PIN in this browser.';render()});
+ if(a==='tab'||a==='auto'||a==='addsub'||a==='one'||a==='movemiss')undo=null;
+ if(a==='tog')return;
+ if(a==='tab')logging='';
+ if(a==='cancel'){logging='';return render()}
+ if(a==='open'){const s=st.sessions.find(x=>x.id===id);if(!s)return render();
+  if(s.date>todayIso())msg='You can log progress once the day of the session arrives.';else{logging=id;msg=''}return render()}
+ if(a==='submit'){const s=st.sessions.find(x=>x.id===id),m=Math.round(+$('#lg-m').value);
+  if(!s)return render();
+  if(!(m>=1&&m<=720)){msg='Enter between 1 and 720 minutes of study to close this session.';return render()}
+  s.done=true;s.logged=m;s.note=($('#lg-n').value||'').trim().slice(0,200);logging='';save();msg='Progress saved. Session closed.';return render()}
+ if(a==='reopen'){const s=st.sessions.find(x=>x.id===id);if(!s)return render();
+  if(armed!==id){armed=id;msg='Tap the check again to reopen this session. Its logged progress will be cleared.';return render()}
+  s.done=false;s.logged=0;s.note='';armed='';save();msg='Session reopened.';return render()}
+ if(a==='del'){const i=st.sessions.findIndex(x=>x.id===id);
+  if(i>=0&&st.sessions[i].done&&armed!==id){armed=id;msg='This session has logged progress. Tap × again to delete it.';return render()}
+  if(i>=0){undo={t:'del',s:st.sessions[i],i};st.sessions.splice(i,1);armed='';save();msg='Session deleted.'}return render()}
+ if(a==='undo'){if(undo&&undo.t==='plan'){st.sessions=st.sessions.filter(x=>!undo.ids.includes(x.id));msg='Plan removed.'}
+  else if(undo&&undo.t==='del'&&st.subjects.some(s=>s.id===undo.s.sid)){st.sessions.splice(Math.min(undo.i,st.sessions.length),0,undo.s);msg='Session restored.'}
+  undo=null;last=[];save();return render()}
+ if(a==='one'){const mins=Math.round(+$('#m-mins').value),date=$('#m-date').value,start=$('#m-start').value;
+  if(!date||!start||!(mins>0)||mins>720)msg='Pick a date, a start time and 1–720 minutes.';
+  else if(tm(start)+mins>1440)msg='That session would run past midnight. Shorten it or start earlier.';
+  else{st.sessions.push({id:uid(),sid:$('#m-sub').value,topic:$('#m-topic').value.trim().slice(0,80),date,start,mins,done:false});save();msg='Session added for '+dayLabel(date)+'.'}
+  last=[];return render()}
+ if(a==='movemiss'){const t=todayIso();let n=0;st.sessions.filter(s=>s.date<t&&!s.done).forEach(s=>{const p=slot(t,s.mins,tm(s.start));if(p<0){n++;return}s.date=t;s.start=hm(p)});save();msg=n?n+' session(s) could not fit today.':'';return render()}
+ if(a==='backup'){$('#bk').value=JSON.stringify(st);return}
+ if(a==='restore'){let o;try{o=clean(JSON.parse($('#bk').value))}catch(e){msg='That backup text could not be read.';return render()}
+  if(!o.subjects.length&&!o.sessions.length){msg='That backup is empty, so nothing was changed.';return render()}
+  st=o;save();msg='Backup restored.';return render()}
+ act0(a,el)}catch(err){msg='Something went wrong, so that action was skipped.';render()}}
+function act0(a,el){
+ const id=el.dataset.id;
+ if(a==='tab'){tab=el.dataset.t;msg='';last=[];armed=''}
+ else if(a==='tog'){const s=st.sessions.find(x=>x.id===id);if(s)s.done=!s.done;save()}
+ else if(a==='del'){st.sessions=st.sessions.filter(x=>x.id!==id);save()}
+ else if(a==='movemiss'){const t=todayIso();st.sessions.filter(s=>s.date<t&&!s.done).forEach(s=>{const n=slot(t,s.mins,tm(s.start));s.date=t;s.start=hm(n)});save()}
+ else if(a==='auto')auto();
+ else if(a==='undo'){st.sessions=st.sessions.filter(x=>!last.includes(x.id));last=[];msg='Plan removed.';save()}
+ else if(a==='one'){const mins=+$('#m-mins').value,date=$('#m-date').value,start=$('#m-start').value;
+  if(!date||!start||!(mins>0))msg='Pick a date, start time and minutes.';
+  else{st.sessions.push({id:uid(),sid:$('#m-sub').value,topic:$('#m-topic').value.trim(),date,start,mins,done:false});save();msg='Session added for '+dayLabel(date)+'.'}last=[]}
+ else if(a==='addsub'){const name=$('#s-name').value.trim();if(!name)msg='Give the subject a name.';else{st.subjects.push({id:uid(),name,color:$('#s-color').value,exam:$('#s-exam').value});save();msg=''}}
+ else if(a==='delsub'){if(armed===id){st.subjects=st.subjects.filter(s=>s.id!==id);st.sessions=st.sessions.filter(s=>s.sid!==id);armed='';save()}else armed=id}
+ render()}
+function render(){
+ if(locked){$('#v').innerHTML='';$('#lock').hidden=false;document.querySelector('.tabs').hidden=true;return}
+ $('#lock').hidden=true;document.querySelector('.tabs').hidden=false;
+ $('#date').textContent=new Date().toLocaleDateString(undefined,{weekday:'long',month:'long',day:'numeric'});
+ document.querySelectorAll('.tabs button').forEach(b=>b.classList.toggle('on',b.dataset.t===tab));
+ try{$('#v').innerHTML=({agenda:vAgenda,plan:vPlan,subjects:vSubjects})[tab]()}catch(e){$('#v').innerHTML='<div class="card">Something went wrong showing this tab. Reload the page; your saved plans are unchanged.</div>'}}
+document.addEventListener('click',e=>{const el=e.target.closest('[data-a]');if(el)act(el.dataset.a,el)});
+document.addEventListener('change',e=>{if(e.target.id==='ap-sub'){const s=sub(e.target.value);if(s.exam){const d=parse(s.exam);d.setDate(d.getDate()-1);$('#ap-end').value=iso(d)}}});
+const typing=()=>/INPUT|SELECT|TEXTAREA/.test((document.activeElement||{}).tagName||'');
+function tick(){if(lastDay!==todayIso()){lastDay=todayIso();if(!typing())render()}}
+setInterval(tick,60000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)tick()});
+addEventListener('storage',e=>{if(e.key===KEY){load();if(!typing())render()}});
+['pointerdown','keydown','scroll'].forEach(ev=>addEventListener(ev,()=>{lastActive=Date.now()},{passive:true}));
+setInterval(()=>{if(pin&&!locked&&Date.now()-lastActive>300000)lock()},15000);
+document.addEventListener('visibilitychange',()=>{if(document.hidden)hiddenAt=Date.now();else if(pin&&!locked&&hiddenAt&&Date.now()-hiddenAt>30000)lock()});
+document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.id==='lk-pin')act('unlock',e.target)});
+render();
+if('serviceWorker' in navigator)addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
+</script></body></html>
